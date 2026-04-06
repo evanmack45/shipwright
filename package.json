@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
+    "@libsql/client": "^0.17.2",
     "@linear/sdk": "^80.1.0",
-    "better-sqlite3": "^12.8.0",
     "drizzle-orm": "^0.45.2",
     "next": "16.2.2",
     "react": "19.2.4",
@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -31,10 +30,5 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3"
-    ]
   }
 }

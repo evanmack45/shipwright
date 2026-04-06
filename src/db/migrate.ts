@@ -1,14 +1,18 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 
-const sqlite = new Database(process.env.DATABASE_URL ?? "shipwright.db");
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL ?? "file:shipwright.db",
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-const db = drizzle(sqlite);
+const db = drizzle(client);
 
-migrate(db, { migrationsFolder: "./drizzle" });
+async function run() {
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  console.log("Migrations applied successfully");
+  client.close();
+}
 
-console.log("Migrations applied successfully");
-sqlite.close();
+run();

@@ -1,10 +1,10 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-const sqlite = new Database(process.env.DATABASE_URL ?? "shipwright.db");
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("busy_timeout = 5000");
-sqlite.pragma("foreign_keys = ON");
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL ?? "file:shipwright.db",
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-export const db = drizzle(sqlite, { schema });
+export const db = drizzle(client, { schema });
