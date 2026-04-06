@@ -16,6 +16,10 @@ export async function generateUpdate(
   weekEnd: string,
   issues: CategorizedIssues,
 ): Promise<string> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return buildFallbackUpdate(teamName, weekStart, weekEnd, issues);
+  }
+
   const prompt = buildPrompt(teamName, weekStart, weekEnd, issues);
 
   const message = await getAnthropic().messages.create({
@@ -30,6 +34,32 @@ export async function generateUpdate(
   }
 
   throw new Error("Unexpected response format from Claude API");
+}
+
+function buildFallbackUpdate(
+  teamName: string,
+  weekStart: string,
+  weekEnd: string,
+  issues: CategorizedIssues,
+): string {
+  const completed = issues.completed
+    .map((i) => `- ${i.title}`)
+    .join("\n") || "- No issues completed";
+  const inProgress = issues.inProgress
+    .map((i) => `- ${i.title}`)
+    .join("\n") || "- No issues in progress";
+  const blocked = issues.blocked
+    .map((i) => `- ${i.title}`)
+    .join("\n");
+
+  let md = `# ${teamName} — Week of ${weekStart} to ${weekEnd}\n\n`;
+  md += `## What Shipped\n${completed}\n\n`;
+  md += `## In Progress\n${inProgress}\n\n`;
+  if (blocked) {
+    md += `## Blockers\n${blocked}\n\n`;
+  }
+  md += `---\n*Generated without AI — set ANTHROPIC_API_KEY for polished updates.*\n`;
+  return md;
 }
 
 function buildPrompt(
