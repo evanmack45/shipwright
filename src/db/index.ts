@@ -42,7 +42,7 @@ let _initialized = false;
 function getClient(): Client {
   if (!_client) {
     _client = createClient({
-      url: process.env.TURSO_DATABASE_URL ?? "file:shipwright.db",
+      url: process.env.TURSO_DATABASE_URL ?? "file:/tmp/shipwright.db",
       authToken: process.env.TURSO_AUTH_TOKEN,
     });
   }
