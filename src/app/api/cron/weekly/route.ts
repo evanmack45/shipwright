@@ -7,42 +7,48 @@ import { generateUpdate } from "@/lib/generate";
 import { randomUUID } from "node:crypto";
 
 export async function GET() {
-  await ensureSchema();
-  const activeProjects = await db.query.projects.findMany({
-    where: eq(projects.status, "active"),
-  });
-
-  const now = new Date();
-  const weekEnd = now.toISOString().split("T")[0];
-  const weekStartDate = new Date(now);
-  weekStartDate.setDate(weekStartDate.getDate() - 7);
-  const weekStart = weekStartDate.toISOString().split("T")[0];
-
-  let generated = 0;
-
-  for (const project of activeProjects) {
-    const client = await getLinearClientForUser(project.userId);
-    if (!client) continue;
-
-    const issues = await fetchTeamIssues(client, project.linearTeamId);
-    const markdown = await generateUpdate(
-      project.name,
-      weekStart,
-      weekEnd,
-      issues,
-    );
-
-    await db.insert(updates).values({
-      id: randomUUID(),
-      projectId: project.id,
-      weekStart,
-      weekEnd,
-      draftMarkdown: markdown,
-      status: "draft",
+  try {
+    await ensureSchema();
+    const activeProjects = await db.query.projects.findMany({
+      where: eq(projects.status, "active"),
     });
 
-    generated++;
-  }
+    const now = new Date();
+    const weekEnd = now.toISOString().split("T")[0];
+    const weekStartDate = new Date(now);
+    weekStartDate.setDate(weekStartDate.getDate() - 7);
+    const weekStart = weekStartDate.toISOString().split("T")[0];
 
-  return NextResponse.json({ generated });
+    let generated = 0;
+
+    for (const project of activeProjects) {
+      const client = await getLinearClientForUser(project.userId);
+      if (!client) continue;
+
+      const issues = await fetchTeamIssues(client, project.linearTeamId);
+      const markdown = await generateUpdate(
+        project.name,
+        weekStart,
+        weekEnd,
+        issues,
+      );
+
+      await db.insert(updates).values({
+        id: randomUUID(),
+        projectId: project.id,
+        weekStart,
+        weekEnd,
+        draftMarkdown: markdown,
+        status: "draft",
+      });
+
+      generated++;
+    }
+
+    return NextResponse.json({ generated });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
