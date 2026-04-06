@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { db } from "@/db";
+import { db, ensureSchema } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { createHmac, randomUUID } from "node:crypto";
@@ -23,6 +23,7 @@ function createToken(userId: string): string {
 }
 
 export async function getSession(): Promise<{ userId: string } | null> {
+  await ensureSchema();
   const cookieStore = await cookies();
   const token = cookieStore.get("sw_session")?.value;
   if (!token) return null;
@@ -46,6 +47,7 @@ export async function getOrCreateUser(
   email: string,
   name?: string,
 ): Promise<string> {
+  await ensureSchema();
   const existing = await db.query.users.findFirst({
     where: eq(users.email, email),
   });

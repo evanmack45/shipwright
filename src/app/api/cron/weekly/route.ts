@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
+import { db, ensureSchema } from "@/db";
 import { projects, updates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getLinearClientForUser, fetchTeamIssues } from "@/lib/linear";
@@ -7,6 +7,7 @@ import { generateUpdate } from "@/lib/generate";
 import { randomUUID } from "node:crypto";
 
 export async function GET() {
+  await ensureSchema();
   const activeProjects = await db.query.projects.findMany({
     where: eq(projects.status, "active"),
   });
