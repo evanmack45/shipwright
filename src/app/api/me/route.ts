@@ -5,24 +5,30 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ authenticated: false });
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ authenticated: false });
+    }
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, session.userId),
+    });
+
+    if (!user) {
+      return NextResponse.json({ authenticated: false });
+    }
+
+    return NextResponse.json({
+      authenticated: true,
+      name: user.name,
+      email: user.email,
+      subscriptionStatus: user.subscriptionStatus,
+      updatesGenerated: user.updatesGenerated,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, session.userId),
-  });
-
-  if (!user) {
-    return NextResponse.json({ authenticated: false });
-  }
-
-  return NextResponse.json({
-    authenticated: true,
-    name: user.name,
-    email: user.email,
-    subscriptionStatus: user.subscriptionStatus,
-    updatesGenerated: user.updatesGenerated,
-  });
 }
