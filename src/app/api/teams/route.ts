@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { getLinearClient, fetchUserTeams } from "@/lib/linear";
+import { getSession } from "@/lib/auth";
+import { getLinearClientForUser, fetchUserTeams } from "@/lib/linear";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const client = await getLinearClient(session.user.id);
+  const client = await getLinearClientForUser(session.userId);
   if (!client) {
     return NextResponse.json(
       { error: "Linear not connected" },

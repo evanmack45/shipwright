@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { projects } from "@/db/schema";
+import { projects, updates } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getLinearClient, fetchTeamIssues } from "@/lib/linear";
+import { getLinearClientForUser, fetchTeamIssues } from "@/lib/linear";
 import { generateUpdate } from "@/lib/generate";
-import { updates } from "@/db/schema";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 export async function GET() {
-  const authHeader =
-    process.env.CRON_SECRET &&
-    `Bearer ${process.env.CRON_SECRET}`;
-
   const activeProjects = await db.query.projects.findMany({
     where: eq(projects.status, "active"),
   });
@@ -25,7 +20,7 @@ export async function GET() {
   let generated = 0;
 
   for (const project of activeProjects) {
-    const client = await getLinearClient(project.userId);
+    const client = await getLinearClientForUser(project.userId);
     if (!client) continue;
 
     const issues = await fetchTeamIssues(client, project.linearTeamId);

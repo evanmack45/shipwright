@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function proxy(request: NextRequest) {
-  const token =
-    request.cookies.get("authjs.session-token")?.value ??
-    request.cookies.get("__Secure-authjs.session-token")?.value;
+  const token = request.cookies.get("sw_session")?.value;
 
   if (!token) {
     return NextResponse.redirect(new URL("/", request.url));

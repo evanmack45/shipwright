@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/db";
 import { updates, projects } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,8 +8,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,7 +26,7 @@ export async function GET(
     where: eq(projects.id, update.projectId),
   });
 
-  if (!project || project.userId !== session.user.id) {
+  if (!project || project.userId !== session.userId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -37,8 +37,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

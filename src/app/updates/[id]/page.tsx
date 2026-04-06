@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -21,7 +20,6 @@ export default function UpdatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { status: authStatus } = useSession();
   const router = useRouter();
   const [update, setUpdate] = useState<Update | null>(null);
   const [markdown, setMarkdown] = useState("");
@@ -29,19 +27,17 @@ export default function UpdatePage({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (authStatus === "unauthenticated") {
-      router.push("/");
-    }
-  }, [authStatus, router]);
-
-  useEffect(() => {
     fetch(`/api/updates/${id}`)
       .then((r) => r.json())
       .then((data) => {
+        if (data.error) {
+          router.push("/");
+          return;
+        }
         setUpdate(data);
         setMarkdown(data.editedMarkdown || data.draftMarkdown);
       });
-  }, [id]);
+  }, [id, router]);
 
   async function save() {
     setSaving(true);

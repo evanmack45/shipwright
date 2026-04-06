@@ -4,37 +4,13 @@ export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name"),
-  image: text("image"),
+  linearApiKey: text("linear_api_key"),
   stripeCustomerId: text("stripe_customer_id"),
   subscriptionStatus: text("subscription_status").default("free"),
   updatesGenerated: integer("updates_generated").default(0),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
-});
-
-export const accounts = sqliteTable("accounts", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  provider: text("provider").notNull(),
-  providerAccountId: text("provider_account_id").notNull(),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  expiresAt: integer("expires_at"),
-  tokenType: text("token_type"),
-  scope: text("scope"),
-});
-
-export const sessions = sqliteTable("sessions", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  sessionToken: text("session_token").notNull().unique(),
-  expires: integer("expires", { mode: "timestamp" }).notNull(),
 });
 
 export const projects = sqliteTable("projects", {

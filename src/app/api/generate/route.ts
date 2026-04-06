@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/db";
 import { projects, updates } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getLinearClient, fetchTeamIssues } from "@/lib/linear";
+import { getLinearClientForUser, fetchTeamIssues } from "@/lib/linear";
 import { generateUpdate } from "@/lib/generate";
 import { canGenerateUpdate, incrementUpdateCount } from "@/lib/stripe";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -23,11 +23,11 @@ export async function POST(request: NextRequest) {
     where: eq(projects.id, projectId),
   });
 
-  if (!project || project.userId !== session.user.id) {
+  if (!project || project.userId !== session.userId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const allowed = await canGenerateUpdate(session.user.id);
+  const allowed = await canGenerateUpdate(session.userId);
   if (!allowed) {
     return NextResponse.json(
       { error: "Free tier limit reached. Please upgrade to continue." },
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const client = await getLinearClient(session.user.id);
+  const client = await getLinearClientForUser(session.userId);
   if (!client) {
     return NextResponse.json(
       { error: "Linear not connected" },
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     status: "draft",
   });
 
-  await incrementUpdateCount(session.user.id);
+  await incrementUpdateCount(session.userId);
 
   return NextResponse.json({ updateId, markdown });
 }

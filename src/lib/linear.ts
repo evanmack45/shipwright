@@ -1,7 +1,7 @@
 import { LinearClient } from "@linear/sdk";
 import { db } from "@/db";
-import { accounts } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 interface LinearIssue {
   id: string;
@@ -21,14 +21,32 @@ export interface CategorizedIssues {
   blocked: LinearIssue[];
 }
 
-export async function getLinearClient(userId: string): Promise<LinearClient | null> {
-  const account = await db.query.accounts.findFirst({
-    where: and(eq(accounts.userId, userId), eq(accounts.provider, "linear")),
+export function createLinearClient(apiKey: string): LinearClient {
+  return new LinearClient({ apiKey });
+}
+
+export async function getLinearClientForUser(
+  userId: string,
+): Promise<LinearClient | null> {
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
   });
 
-  if (!account?.accessToken) return null;
+  if (!user?.linearApiKey) return null;
 
-  return new LinearClient({ accessToken: account.accessToken });
+  return createLinearClient(user.linearApiKey);
+}
+
+export async function verifyLinearKey(
+  apiKey: string,
+): Promise<{ valid: boolean; name?: string; email?: string }> {
+  try {
+    const client = createLinearClient(apiKey);
+    const viewer = await client.viewer;
+    return { valid: true, name: viewer.name, email: viewer.email };
+  } catch {
+    return { valid: false };
+  }
 }
 
 export async function fetchTeamIssues(
@@ -59,7 +77,10 @@ export async function fetchTeamIssues(
     const mapped: LinearIssue = {
       id: issue.id,
       title: issue.title,
-      state: { name: state?.name ?? "Unknown", type: state?.type ?? "unstarted" },
+      state: {
+        name: state?.name ?? "Unknown",
+        type: state?.type ?? "unstarted",
+      },
       assignee: assignee ? { name: assignee.name } : null,
       completedAt: issue.completedAt?.toISOString() ?? null,
       createdAt: issue.createdAt.toISOString(),

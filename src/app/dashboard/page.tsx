@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -18,18 +17,32 @@ interface Team {
   key: string;
 }
 
+interface UserInfo {
+  authenticated: boolean;
+  name?: string;
+  email?: string;
+  subscriptionStatus?: string;
+  updatesGenerated?: number;
+}
+
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
       <Dashboard />
     </Suspense>
   );
 }
 
 function Dashboard() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [showTeams, setShowTeams] = useState(false);
@@ -37,18 +50,24 @@ function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/");
-    }
-  }, [status, router]);
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.authenticated) {
+          router.push("/");
+        } else {
+          setUser(data);
+        }
+      });
+  }, [router]);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (user?.authenticated) {
       fetch("/api/projects")
         .then((r) => r.json())
         .then(setProjects);
     }
-  }, [status]);
+  }, [user]);
 
   async function loadTeams() {
     setShowTeams(true);
@@ -56,7 +75,7 @@ function Dashboard() {
     if (res.ok) {
       setTeams(await res.json());
     } else {
-      setError("Could not load Linear teams. Is your account connected?");
+      setError("Could not load Linear teams.");
     }
   }
 
@@ -96,15 +115,13 @@ function Dashboard() {
     setGenerating(null);
   }
 
-  async function startBilling() {
-    const res = await fetch("/api/billing", { method: "POST" });
-    if (res.ok) {
-      const { url } = await res.json();
-      window.location.href = url;
-    }
+  function logout() {
+    document.cookie =
+      "sw_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+    router.push("/");
   }
 
-  if (status === "loading") {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
         Loading...
@@ -119,9 +136,11 @@ function Dashboard() {
           Shipwright
         </Link>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">{session?.user?.email}</span>
+          <span className="text-sm text-gray-400">
+            {user.name || user.email}
+          </span>
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={logout}
             className="text-sm text-gray-500 hover:text-white transition"
           >
             Sign out
@@ -139,12 +158,16 @@ function Dashboard() {
             >
               + Add Linear Team
             </button>
-            <button
-              onClick={startBilling}
-              className="border border-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm hover:border-gray-500 transition"
-            >
-              Upgrade ($9/mo)
-            </button>
+            {user.subscriptionStatus !== "active" && (
+              <a
+                href={process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border border-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm hover:border-gray-500 transition"
+              >
+                Upgrade ($9/mo)
+              </a>
+            )}
           </div>
         </div>
 
@@ -159,6 +182,12 @@ function Dashboard() {
             {error}
           </div>
         )}
+
+        <div className="text-sm text-gray-500 mb-6">
+          {user.subscriptionStatus === "active"
+            ? "Pro plan — unlimited updates"
+            : `Free tier — ${user.updatesGenerated ?? 0}/2 updates used`}
+        </div>
 
         {showTeams && teams.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
